@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace Lab07_sangthu3
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        // Chuoi ket noi
+        string strCon = @"Data Source=(LocalDB)\v11.0;AttachDbFilename=D:\Thuc hanh Csharp - VNUA\Code_thuc_hanh\Lab07_sangthu3\Lab07_sangthu3\QuanLySinhVien.mdf;Integrated Security=True";
+
+        // Doi tuong ket noi
+        SqlConnection sqlCon = null;
+
+        SqlDataAdapter adapter = null;
+        DataSet ds = null;
+
+        // Ham mo ket noi
+        private void MoKetNoi()
+        {
+            if (sqlCon == null)
+            {
+                sqlCon = new SqlConnection(strCon);
+            }
+
+            if (sqlCon.State == ConnectionState.Closed)
+            {
+                sqlCon.Open();
+            }
+        }
+
+        // Ham dong ket noi
+        private void DongKetNoi()
+        {
+            if (sqlCon != null && sqlCon.State == ConnectionState.Open)
+            {
+                sqlCon.Close();
+            }
+        }
+
+        // Ham hien thi danh sach sinh vien
+        private void HienThiDSSinhVien()
+        {
+            MoKetNoi();
+
+            string sql = "select * from tblSinhVien";
+
+            adapter = new SqlDataAdapter(sql, sqlCon);
+            SqlCommandBuilder builder = new SqlCommandBuilder(adapter);
+            ds = new DataSet();
+            adapter.Fill(ds, "tblSV");
+            dgvKetQua.DataSource = ds.Tables["tblSV"];
+        }
+
+        // Ham tim kiem theo ma sinh vien
+        private void TimKiemTheoMa(string maSV)
+        {
+            MoKetNoi();
+
+            string sql = "select * from tblSinhVien where MaSV='" + maSV + "'";
+
+            adapter = new SqlDataAdapter(sql, sqlCon);
+            ds = new DataSet();
+            adapter.Fill(ds, "tblTK");
+            dgvKetQua.DataSource = ds.Tables["tblTK"];
+        }
+
+        // Ham tim kiem theo ten sinh vien
+        private void TimKiemTheoTen(string tenSV)
+        {
+            MoKetNoi();
+
+            string sql = "select * from tblSinhVien where TenSV like '%" + tenSV + "%'";
+
+            adapter = new SqlDataAdapter(sql, sqlCon);
+            ds = new DataSet();
+            adapter.Fill(ds, "tblTK");
+            dgvKetQua.DataSource = ds.Tables["tblTK"];
+        }
+
+        // Ham them sinh vien
+        private void ThemSinhVien(string ma, string ten, string gt, string ns, string dc)
+        {
+            MoKetNoi();
+
+            DataRow row = ds.Tables["tblSV"].NewRow();
+            row["MaSV"] = ma;
+            row["TenSV"] = ten;
+            row["GioiTinh"] = gt;
+            row["NgaySinh"] = ns;
+            row["DiaChi"] = dc;
+
+            ds.Tables["tblSV"].Rows.Add(row);
+
+            int kq = adapter.Update(ds.Tables["tblSV"]);
+            if (kq > 0)
+            {
+                MessageBox.Show("Thêm sinh viên thành công!");
+                HienThiDSSinhVien();
+            }
+            else
+            {
+                MessageBox.Show("Thêm sinh viên không thành công!");
+            }
+        }
+
+        // Ham xoa sinh vien
+        private void XoaSV()
+        {
+            DataRow row = ds.Tables["tblSV"].Rows[vt];
+            row.Delete();
+
+            int kq = adapter.Update(ds.Tables["tblSV"]);
+            if (kq > 0)
+            {
+                MessageBox.Show("Xoá sinh viên thành công!");
+                HienThiDSSinhVien();
+
+                txtMaSV.Text = "";
+                txtTenSV.Text = "";
+                txtDiaChi.Text = "";
+
+                btnXoa.Enabled = false;
+            }
+            else
+            {
+                MessageBox.Show("Xoá sinh viên không thành công!");
+            }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            HienThiDSSinhVien();
+
+            groupBox2.Enabled = false;
+            btnSua.Enabled = false;
+            btnXoa.Enabled = false;
+
+            cbGioiTinh.Items.Add("Nam");
+            cbGioiTinh.Items.Add("Nữ");
+        }
+
+        private void btnThoat_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show("Bạn có thực sự muốn thoát hay không?", "Hộp thoại", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes)
+            {
+                Close();
+            }
+        }
+
+        private void btnTimKiem_Click(object sender, EventArgs e)
+        {
+            // Lay du lieu tu form
+            string maSV = txtTkMaSV.Text.Trim();
+            string tenSV = txtTkTenSV.Text.Trim();
+
+            // Tim kiem
+            if (maSV == "" && tenSV == "")
+            {
+                MessageBox.Show("Bạn chưa nhập thông tin cần tìm!");
+                txtTkMaSV.Focus();
+            }
+            else if (maSV != "" && tenSV == "")
+            {
+                TimKiemTheoMa(maSV);
+            }
+            else if (maSV == "" && tenSV != "")
+            {
+                TimKiemTheoTen(tenSV);
+            }
+            else if (maSV != "" && tenSV != "")
+            {
+                TimKiemTheoMa(maSV);
+            }
+        }
+
+        private void btnThem_Click(object sender, EventArgs e)
+        {
+            groupBox2.Enabled = true;
+            cn = 1; // Them
+        }
+
+        // Kiem tra chuc nang
+        int cn = 0;
+
+        private void btnLuu_Click(object sender, EventArgs e)
+        {
+            if (cn == 1)
+            {
+                // Lay du lieu tu form
+                string ma = txtMaSV.Text.Trim();
+                string ten = txtTenSV.Text.Trim();
+                string gt = "";
+                if (cbGioiTinh.SelectedIndex == 0)
+                {
+                    gt = "Nam";
+                }
+                else if (cbGioiTinh.SelectedIndex == 1)
+                {
+                    gt = "Nữ";
+                }
+                string ns = dtpNgaySinh.Value.Year + "/" + dtpNgaySinh.Value.Month + "/" + dtpNgaySinh.Value.Day;
+                string dc = txtDiaChi.Text.Trim();
+
+                ThemSinhVien(ma, ten, gt, ns, dc);
+            }
+            else if (cn == 2)
+            {
+                if (vt == -1) return;
+
+                DataRow row = ds.Tables["tblSV"].Rows[vt];
+
+                row.BeginEdit();
+
+                row["MaSV"] = txtMaSV.Text.Trim();
+                row["TenSV"] = txtTenSV.Text.Trim();
+                if (cbGioiTinh.SelectedIndex == 0)
+                {
+                    row["GioiTinh"] = "Nam";
+                }
+                else if (cbGioiTinh.SelectedIndex == 1)
+                {
+                    row["GioiTinh"] = "Nữ";
+                }
+                row["NgaySinh"] = dtpNgaySinh.Value.ToString("MM/dd/yyyy");
+                row["DiaChi"] = txtDiaChi.Text.Trim();
+
+                row.EndEdit();
+
+                int kq = adapter.Update(ds.Tables["tblSV"]);
+                if (kq > 0)
+                {
+                    MessageBox.Show("Sửa thông tin sinh viên thành công!");
+                    HienThiDSSinhVien();
+                }
+                else
+                {
+                    MessageBox.Show("Sửa thông tin sinh viên không thành công!");
+                }
+
+                txtMaSV.Text = "";
+                txtTenSV.Text = "";
+                txtDiaChi.Text = "";
+                groupBox2.Enabled = false;
+                btnSua.Enabled = false;
+            }
+        }
+
+        // Vị tri click
+        int vt = -1;
+
+        private void dgvKetQua_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            vt = e.RowIndex;
+            if (vt == -1) return;
+
+            DataRow row = ds.Tables["tblSV"].Rows[vt];
+            txtMaSV.Text = row["MaSV"].ToString();
+            txtTenSV.Text = row["TenSV"].ToString();
+            string gt = row["GioiTinh"].ToString();
+            if (gt == "Nam")
+            {
+                cbGioiTinh.SelectedIndex = 0;
+            }
+            else
+            {
+                cbGioiTinh.SelectedIndex = 1;
+            }
+            string[] ns = row["NgaySinh"].ToString().Split('/');
+            dtpNgaySinh.Value = new DateTime(int.Parse(ns[2].Substring(0, 4)), int.Parse(ns[0]), int.Parse(ns[1]));
+            txtDiaChi.Text = row["DiaChi"].ToString();
+
+            btnSua.Enabled = true;
+            btnXoa.Enabled = true;
+        }
+
+        private void btnSua_Click(object sender, EventArgs e)
+        {
+            groupBox2.Enabled = true;
+            cn = 2; // Sua
+        }
+
+        private void btnXoa_Click(object sender, EventArgs e)
+        {
+            if (vt == -1) return;
+
+            DialogResult result = MessageBox.Show("Bạn có thực sự muốn xoá hay không?", "Hộp thoại", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (result == DialogResult.Yes)
+            {
+                XoaSV();
+            }
+            else
+            {
+                btnXoa.Enabled = false;
+            }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            frmBaoCao frm = new frmBaoCao();
+            frm.Show();
+        }
+    }
+}
+
